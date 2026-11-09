@@ -94,6 +94,7 @@
 
 #define SCCNXP_HAVE_IO		0x00000001
 #define SCCNXP_HAVE_MR0		0x00000002
+#define SCCNXP_HAVE_EXT_BRG	0x00000004
 
 struct sccnxp_chip {
 	const char		*name;
@@ -219,6 +220,17 @@ static const struct sccnxp_chip sc68692 = {
 	.trwd		= 200,
 };
 
+static const struct sccnxp_chip xr68c681 = {
+	.name		= "XR68C681",
+	.nr		= 2,
+	.freq_min	= 1000000,
+	.freq_std	= 3686400,
+	.freq_max	= 4000000,
+	.flags		= SCCNXP_HAVE_IO | SCCNXP_HAVE_EXT_BRG,
+	.fifosize	= 3,
+	.trwd		= 200,
+};
+
 static u8 sccnxp_read(struct uart_port *port, u8 reg)
 {
 	struct sccnxp_port *s = dev_get_drvdata(port->dev);
@@ -299,12 +311,57 @@ static const struct {
 	{ 0, 0, 0, 0 }
 };
 
+/* XR68C681 data sheet, table 9: ACR[7] = 1, X = per-channel BRG extension. */
+static const struct {
+	unsigned int baud;
+	u8 csr;
+	bool extended;
+} baud_xr68c681[] = {
+	{ 50, 0, true }, { 75, 0, false }, { 110, 1, false },
+	{ 134, 2, false }, { 150, 3, false }, { 200, 3, true },
+	{ 300, 4, false }, { 600, 5, false }, { 1200, 6, false },
+	{ 2000, 7, false }, { 2400, 8, false }, { 3600, 4, true },
+	{ 4800, 9, false }, { 7200, 10, true }, { 9600, 11, false },
+	{ 14400, 5, true }, { 19200, 12, false }, { 28800, 6, true },
+	{ 38400, 12, true }, { 57600, 7, true }, { 115200, 8, true },
+};
+
+static int sccnxp_set_baud_xr68c681(struct uart_port *port, int baud)
+{
+	struct sccnxp_port *s = dev_get_drvdata(port->dev);
+	int i, best = 0, besterr = INT_MAX, actual = 0;
+
+	for (i = 0; i < ARRAY_SIZE(baud_xr68c681); i++) {
+		int rate = DIV_ROUND_CLOSEST(port->uartclk,
+				DIV_ROUND_CLOSEST(s->chip->freq_std,
+						 baud_xr68c681[i].baud));
+
+		if (!sccnxp_update_best_err(baud, rate, &besterr)) {
+			best = i;
+			actual = rate;
+		}
+	}
+
+	/* The shared counter/timer remains available to the platform. */
+	sccnxp_write(port, SCCNXP_ACR_REG, s->pdata.acr_fixed | ACR_BAUD1);
+	sccnxp_port_write(port, SCCNXP_CR_REG,
+			  baud_xr68c681[best].extended ? 0x80 : 0x90);
+	sccnxp_port_write(port, SCCNXP_CR_REG,
+			  baud_xr68c681[best].extended ? 0xa0 : 0xb0);
+	sccnxp_port_write(port, SCCNXP_CSR_REG,
+			  baud_xr68c681[best].csr * 0x11);
+	return actual;
+}
+
 static int sccnxp_set_baud(struct uart_port *port, int baud)
 {
 	struct sccnxp_port *s = dev_get_drvdata(port->dev);
 	int div_std, tmp_baud, bestbaud = INT_MAX, besterr = INT_MAX;
 	struct sccnxp_chip *chip = s->chip;
 	u8 i, acr = 0, csr = 0, mr0 = 0;
+
+	if (chip->flags & SCCNXP_HAVE_EXT_BRG)
+		return sccnxp_set_baud_xr68c681(port, baud);
 
 	/* Find divisor to load to the timer preset registers */
 	div_std = DIV_ROUND_CLOSEST(port->uartclk, 2 * 16 * baud);
@@ -350,12 +407,22 @@ static int sccnxp_set_baud(struct uart_port *port, int baud)
 	return bestbaud;
 }
 
+static void sccnxp_write_imr(struct uart_port *port)
+{
+	struct sccnxp_port *s = dev_get_drvdata(port->dev);
+
+	if (s->pdata.write_imr)
+		s->pdata.write_imr(port->dev, s->imr);
+	else
+		sccnxp_write(port, SCCNXP_IMR_REG, s->imr);
+}
+
 static void sccnxp_enable_irq(struct uart_port *port, int mask)
 {
 	struct sccnxp_port *s = dev_get_drvdata(port->dev);
 
 	s->imr |= mask << (port->line * 4);
-	sccnxp_write(port, SCCNXP_IMR_REG, s->imr);
+	sccnxp_write_imr(port);
 }
 
 static void sccnxp_disable_irq(struct uart_port *port, int mask)
@@ -363,7 +430,7 @@ static void sccnxp_disable_irq(struct uart_port *port, int mask)
 	struct sccnxp_port *s = dev_get_drvdata(port->dev);
 
 	s->imr &= ~(mask << (port->line * 4));
-	sccnxp_write(port, SCCNXP_IMR_REG, s->imr);
+	sccnxp_write_imr(port);
 }
 
 static void sccnxp_set_bit(struct uart_port *port, int sig, int state)
@@ -708,7 +775,8 @@ static void sccnxp_set_termios(struct uart_port *port,
 	/* Setup baudrate */
 	baud = uart_get_baud_rate(port, termios, old, 50,
 				  (s->chip->flags & SCCNXP_HAVE_MR0) ?
-				  230400 : 38400);
+				  230400 : (s->chip->flags & SCCNXP_HAVE_EXT_BRG) ?
+				  115200 : 38400);
 	baud = sccnxp_set_baud(port, baud);
 
 	/* Update timeout according to new baud rate */
@@ -876,6 +944,7 @@ static const struct platform_device_id sccnxp_id_table[] = {
 	{ .name = "sc28202",	.driver_data = (kernel_ulong_t)&sc28202, },
 	{ .name = "sc68681",	.driver_data = (kernel_ulong_t)&sc68681, },
 	{ .name = "sc68692",	.driver_data = (kernel_ulong_t)&sc68692, },
+	{ .name = "xr68c681",	.driver_data = (kernel_ulong_t)&xr68c681, },
 	{ }
 };
 MODULE_DEVICE_TABLE(platform, sccnxp_id_table);
@@ -997,10 +1066,14 @@ static int sccnxp_probe(struct platform_device *pdev)
 
 	/* Disable interrupts */
 	s->imr = 0;
-	sccnxp_write(&s->port[0], SCCNXP_IMR_REG, 0);
+	sccnxp_write_imr(&s->port[0]);
 
 	if (!s->poll) {
-		ret = devm_request_threaded_irq(&pdev->dev, s->irq, NULL,
+		if (s->pdata.shared_irq)
+			ret = devm_request_irq(&pdev->dev, s->irq, sccnxp_ist,
+					       IRQF_SHARED, dev_name(&pdev->dev), s);
+		else
+			ret = devm_request_threaded_irq(&pdev->dev, s->irq, NULL,
 						sccnxp_ist,
 						IRQF_TRIGGER_FALLING |
 						IRQF_ONESHOT,

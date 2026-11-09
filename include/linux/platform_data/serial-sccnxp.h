@@ -10,6 +10,8 @@
 #ifndef _PLATFORM_DATA_SERIAL_SCCNXP_H_
 #define _PLATFORM_DATA_SERIAL_SCCNXP_H_
 
+struct device;
+
 #define SCCNXP_MAX_UARTS	2
 
 /* Output lines */
@@ -79,6 +81,11 @@ struct sccnxp_pdata {
 	const u32		mctrl_cfg[SCCNXP_MAX_UARTS];
 	/* Timer value for polling mode (usecs) */
 	const unsigned int	poll_time_us;
+	/* XR68C681: non-baud ACR bits owned by the platform's timer/GPIO. */
+	const u8		acr_fixed;
+	/* Shared MMIO interrupt: callback merges UART bits with other users. */
+	void (*write_imr)(struct device *dev, u8 mask);
+	bool			shared_irq;
 };
 
 #endif
