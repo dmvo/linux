@@ -366,7 +366,7 @@ int mmc_add_card(struct mmc_card *card)
 		uhs_bus_speed_mode = uhs_speeds[card->sd_bus_speed];
 
 	if (mmc_host_is_spi(card->host))
-		pr_info("%s: new %s%s card on SPI\n",
+		pr_notice("%s: new %s%s card on SPI\n",
 			mmc_hostname(card->host), speed_mode, type);
 	else
 		pr_info("%s: new %s%s%s card at address %04x\n",

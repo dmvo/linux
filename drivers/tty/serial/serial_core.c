@@ -2545,7 +2545,7 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
 
 	uart_get_ioinfos(port, ioinfos, sizeof(ioinfos));
 
-	pr_info("%s%s%s%s (irq = %u, base_baud = %u) is a %s\n",
+	pr_notice("%s%s%s%s (irq = %u, base_baud = %u) is a %s\n",
 		port->dev ? dev_name(port->dev) : "",
 		port->dev ? ": " : "",
 		port->name, ioinfos, port->irq, port->uartclk / 16, uart_type(port));

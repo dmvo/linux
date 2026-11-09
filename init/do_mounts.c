@@ -161,11 +161,10 @@ static int __init do_mount_root(const char *name, const char *fs,
 	init_chdir("/root");
 	s = current->fs->pwd.dentry->d_sb;
 	ROOT_DEV = s->s_dev;
-	printk(KERN_INFO
-	       "VFS: Mounted root (%s filesystem)%s on device %u:%u.\n",
-	       s->s_type->name,
-	       sb_rdonly(s) ? " readonly" : "",
-	       MAJOR(ROOT_DEV), MINOR(ROOT_DEV));
+	pr_notice("VFS: Mounted root (%s filesystem)%s on device %u:%u.\n",
+		  s->s_type->name,
+		  sb_rdonly(s) ? " readonly" : "",
+		  MAJOR(ROOT_DEV), MINOR(ROOT_DEV));
 
 out:
 	kfree(data_page);

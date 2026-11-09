@@ -1474,7 +1474,7 @@ static int run_init_process(const char *init_filename)
 	const char *const *p;
 
 	argv_init[0] = init_filename;
-	pr_info("Run %s as init process\n", init_filename);
+	pr_notice("Run %s as init process\n", init_filename);
 	pr_debug("  with arguments:\n");
 	for (p = argv_init; *p; p++)
 		pr_debug("    %s\n", *p);
