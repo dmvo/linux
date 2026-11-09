@@ -612,6 +612,7 @@ config IKHEADERS
 
 config LOG_BUF_SHIFT
 	int "Kernel log buffer size (16 => 64KB, 17 => 128KB)"
+	range 10 25 if BASE_SMALL
 	range 12 25
 	default 17
 	depends on PRINTK
@@ -620,6 +621,8 @@ config LOG_BUF_SHIFT
 	  The final size is affected by LOG_CPU_MAX_BUF_SHIFT config
 	  parameter, see below. Any higher size also might be forced
 	  by "log_buf_len" boot parameter.
+	  BASE_SMALL permits smaller buffers to conserve RAM. These retain
+	  fewer messages and truncate long records more aggressively.
 
 	  Examples:
 		     17 => 128 KB

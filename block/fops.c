@@ -397,6 +397,9 @@ static ssize_t blkdev_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 	struct block_device *bdev = I_BDEV(iocb->ki_filp->f_mapping->host);
 	unsigned int nr_pages;
 
+	if (IS_ENABLED(CONFIG_ROSCO_M68K_ROMFS_POC))
+		return -EOPNOTSUPP;
+
 	if (!iov_iter_count(iter))
 		return 0;
 
@@ -736,6 +739,9 @@ static ssize_t blkdev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	size_t shorted = 0;
 	ssize_t ret;
 
+	if (IS_ENABLED(CONFIG_ROSCO_M68K_ROMFS_POC))
+		return -EROFS;
+
 	if (bdev_read_only(bdev))
 		return -EPERM;
 
@@ -954,7 +960,10 @@ const struct file_operations def_blk_fops = {
 
 static __init int blkdev_init(void)
 {
-	return bioset_init(&blkdev_dio_pool, 4,
+	if (IS_ENABLED(CONFIG_ROSCO_M68K_ROMFS_POC))
+		return 0;
+
+	return bioset_init(&blkdev_dio_pool, IS_ENABLED(CONFIG_BASE_SMALL) ? 1 : 4,
 				offsetof(struct blkdev_dio, bio),
 				BIOSET_NEED_BVECS|BIOSET_PERCPU_CACHE);
 }

@@ -6730,11 +6730,18 @@ void calculate_min_free_kbytes(void)
 	lowmem_kbytes = nr_free_buffer_pages() * (PAGE_SIZE >> 10);
 	new_min_free_kbytes = int_sqrt(lowmem_kbytes * 16);
 
-	if (new_min_free_kbytes > user_min_free_kbytes)
+	if (new_min_free_kbytes > user_min_free_kbytes) {
 		min_free_kbytes = clamp(new_min_free_kbytes, 128, 262144);
-	else
+		/* A 128 KiB floor can consume most of a small NOMMU system. */
+		if (!IS_ENABLED(CONFIG_MMU))
+			min_free_kbytes = min_t(unsigned long, min_free_kbytes,
+				max_t(unsigned long, PAGE_SIZE >> 10,
+				      lowmem_kbytes /
+				      (IS_ENABLED(CONFIG_BASE_SMALL) ? 64 : 16)));
+	} else {
 		pr_warn_ratelimited("min_free_kbytes is not updated to %d because user defined value %d is preferred\n",
 				    new_min_free_kbytes, user_min_free_kbytes);
+	}
 
 }
 

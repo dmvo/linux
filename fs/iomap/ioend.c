@@ -568,8 +568,12 @@ EXPORT_SYMBOL_GPL(iomap_bounce_read_end_io);
 
 static int __init iomap_ioend_init(void)
 {
-	const unsigned int nr_mempool_entries = 4 * (PAGE_SIZE / SECTOR_SIZE);
+	const unsigned int nr_mempool_entries = IS_ENABLED(CONFIG_BASE_SMALL) ?
+		1 : 4 * (PAGE_SIZE / SECTOR_SIZE);
 	int error;
+
+	if (IS_ENABLED(CONFIG_ROSCO_M68K_ROMFS_POC))
+		return 0;
 
 	error = bioset_init(&iomap_ioend_bioset, nr_mempool_entries,
 			   offsetof(struct iomap_ioend, io_bio),

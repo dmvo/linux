@@ -1065,7 +1065,11 @@ EXPORT_SYMBOL_GPL(__iomap_dio_read_simple);
 
 static int __init iomap_dio_init(void)
 {
-	return bioset_init(&iomap_dio_simple_pool, 4,
+	if (IS_ENABLED(CONFIG_ROSCO_M68K_ROMFS_POC))
+		return 0;
+
+	return bioset_init(&iomap_dio_simple_pool,
+			   IS_ENABLED(CONFIG_BASE_SMALL) ? 1 : 4,
 			   offsetof(struct iomap_dio_simple, bio),
 			   BIOSET_NEED_BVECS | BIOSET_PERCPU_CACHE);
 }
