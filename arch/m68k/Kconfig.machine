@@ -144,6 +144,26 @@ config VIRT
 	  This options enable a pure virtual machine based on m68k,
 	  VIRTIO MMIO devices and GOLDFISH interfaces (TTY, RTC, PIC).
 
+config ROSCO_M68K
+	bool "rosco_m68k R2"
+	depends on !MMU
+	select M68010
+	help
+	  Support the rosco_m68k R2 board fitted with an MC68010 and an
+	  XR68C681 DUART. The board has 1 MiB of RAM.
+	  Serial console, timer interrupts and SPI SD storage are supported.
+	  Select this only for a board fitted with the MC68010 processor.
+
+config ROSCO_M68K_ROMFS_POC
+	bool "Minimal read-only ROMFS proof of concept"
+	depends on ROSCO_M68K && BLOCK
+	select BUFFER_HEAD
+	help
+	  Temporary bring-up configuration for a ROMFS-only system. Disable
+	  raw block-device writes, direct I/O and unused iomap reserve pools.
+	  Do not enable filesystems that use iomap with this option.
+	  This option is intended only for the minimal userspace boot demo.
+
 config PILOT
 	bool
 

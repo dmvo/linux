@@ -234,6 +234,17 @@ struct frame {
 		    unsigned long  pd3;      /* push data 3*/
 	    } fmt7;
 	    struct {
+		    unsigned short ssw;      /* special status word */
+		    unsigned long  daddr;    /* fault address */
+		    unsigned short reserved1;
+		    unsigned short dobuf;    /* data output buffer */
+		    unsigned short reserved2;
+		    unsigned short dibuf;    /* data input buffer */
+		    unsigned short reserved3;
+		    unsigned short iobuf;    /* instruction input buffer */
+		    unsigned short int1[16]; /* internal registers */
+	    } fmt8;
+	    struct {
 		    unsigned long  iaddr;    /* instruction address */
 		    unsigned short int1[4];  /* internal registers */
 	    } fmt9;

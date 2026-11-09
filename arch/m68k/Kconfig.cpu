@@ -67,6 +67,13 @@ config M68000
 	  System-On-Chip devices (eg 68328, 68302, etc). It does not contain
 	  a paging MMU.
 
+config M68010
+	bool "MC68010 processor"
+	depends on M68000
+	help
+	  Select this for a stand-alone MC68010 without an MMU. The 68010
+	  uses a vector base register and format/vector exception frames.
+
 config M68020
 	bool "68020 support" if M68KCLASSIC
 	depends on MMU
@@ -412,6 +419,7 @@ config SINGLE_MEMORY_CHUNK
 config ARCH_FORCE_MAX_ORDER
 	int "Order of maximal physically contiguous allocations" if ADVANCED
 	depends on !SINGLE_MEMORY_CHUNK
+	default 8 if ROSCO_M68K
 	default "10"
 	help
 	  The kernel page allocator limits the size of maximal physically

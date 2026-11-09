@@ -781,6 +781,13 @@ asmlinkage void buserr_c(struct frame *fp)
 #endif /* CONFIG_COLDFIRE && CONFIG_MMU */
 
 	switch (fp->ptregs.format) {
+#ifdef CONFIG_M68010
+	case 8:				/* MC68010 bus error */
+		die_if_kernel("bus error", &fp->ptregs, 0);
+		force_sig_fault(SIGBUS, BUS_ADRERR,
+				(void __user *)fp->un.fmt8.daddr);
+		break;
+#endif
 #if defined (CONFIG_M68060)
 	case 4:				/* 68060 access error */
 	  access_error060 (fp);
@@ -889,6 +896,11 @@ void show_registers(struct pt_regs *regs)
 			fp->un.fmt7.wb1dpd0, fp->un.fmt7.pd1, fp->un.fmt7.pd2,
 			fp->un.fmt7.pd3);
 		addr += sizeof(fp->un.fmt7);
+		break;
+	case 0x8:
+		pr_cont("ssw=%04x daddr=%08lx\n",
+			fp->un.fmt8.ssw, fp->un.fmt8.daddr);
+		addr += sizeof(fp->un.fmt8);
 		break;
 	case 0x9:
 		pr_cont("instr addr=%08lx\n", fp->un.fmt9.iaddr);
@@ -1110,6 +1122,9 @@ asmlinkage void trap_c(struct frame *fp)
 		break;
 	    case 7:
 		addr = (void __user *) fp->un.fmt7.effaddr;
+		break;
+	    case 8:
+		addr = (void __user *) fp->un.fmt8.daddr;
 		break;
 	    case 9:
 		addr = (void __user *) fp->un.fmt9.iaddr;

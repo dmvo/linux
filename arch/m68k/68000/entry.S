@@ -127,6 +127,15 @@ Lsignal_return:
 /*
  * This is the main interrupt handler, responsible for calling process_int()
  */
+#ifdef CONFIG_ROSCO_M68K
+ENTRY(rosco_inthandler)
+	SAVE_ALL_INT
+	movel	%sp,%sp@-
+	pea	5:w
+	jbsr	do_IRQ
+	addql	#8,%sp
+	bra	ret_from_exception
+#else
 inthandler1:
 	SAVE_ALL_INT
 	movew	%sp@(PT_OFF_FORMATVEC), %d0
@@ -218,6 +227,7 @@ inthandler:
 /*
  * Handler for uninitialized and spurious interrupts.
  */
+#endif
 ENTRY(bad_interrupt)
 	addql	#1,irq_err_count
 	rte

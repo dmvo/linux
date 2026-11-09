@@ -10,7 +10,12 @@
 
 # 68328, 68EZ328, 68VZ328
 
-obj-y			+= entry.o ints.o timers.o m68328.o
+obj-y			+= entry.o
+ifdef CONFIG_ROSCO_M68K
+obj-y			+= rosco.o
+else
+obj-y			+= ints.o timers.o m68328.o
+endif
 obj-$(CONFIG_ROM)	+= romvec.o
 
 obj-$(CONFIG_DRAGEN2)	+= dragen2.o

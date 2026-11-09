@@ -55,7 +55,9 @@ void (*mach_reset)(void);
 void (*mach_halt)(void);
 
 #ifdef CONFIG_M68000
-#if defined(CONFIG_M68328)
+#if defined(CONFIG_M68010)
+#define CPU_NAME	"MC68010"
+#elif defined(CONFIG_M68328)
 #define CPU_NAME	"MC68328"
 #elif defined(CONFIG_M68EZ328)
 #define CPU_NAME	"MC68EZ328"

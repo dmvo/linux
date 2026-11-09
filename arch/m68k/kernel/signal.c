@@ -192,17 +192,31 @@ void ret_from_user_rt_signal(void);
 
 static inline int frame_extra_sizes(int f)
 {
+#ifdef CONFIG_M68010
+	/* MC68010 has the four-word frame and the 29-word fault frame. */
+	switch (f) {
+	case 0:
+		return 0;
+	case 8:
+		return sizeof_field(struct frame, un.fmt8);
+	default:
+		return -1;
+	}
+#else
 	/* No frame size adjustments required on non-MMU CPUs */
 	return 0;
+#endif
 }
 
 static inline void adjustformat(struct pt_regs *regs)
 {
+#ifndef CONFIG_M68010
 	/*
 	 * set format byte to make stack appear modulo 4, which it will
 	 * be when doing the rte
 	 */
 	regs->format = 0x4;
+#endif
 }
 
 static inline void save_a5_state(struct sigcontext *sc, struct pt_regs *regs)

@@ -77,6 +77,11 @@ _start:
 
 	movew	#0x2700, %sr			/* disable all interrupts */
 
+#ifdef CONFIG_M68010
+	movel	#CONFIG_VECTORBASE, %d0
+	movec	%d0, %vbr
+#endif
+
 /*****************************************************************************
  * Setup PLL and wait for it to settle (in 68x328 cpu's).
  * Also, if enabled, init serial port.
